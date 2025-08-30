@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		887ADE7F2E630F0C00C11B68 /* MedsDispenser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MedsDispenser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		887ADE7F2E630F0C00C11B68 /* Meds.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Meds.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		88CBD77C2E633784000C65DA /* Meds-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Meds-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +33,7 @@
 		887ADE762E630F0C00C11B68 = {
 			isa = PBXGroup;
 			children = (
+				88CBD77C2E633784000C65DA /* Meds-Info.plist */,
 				887ADE812E630F0C00C11B68 /* MedsDispenser */,
 				887ADE802E630F0C00C11B68 /* Products */,
 			);
@@ -40,7 +42,7 @@
 		887ADE802E630F0C00C11B68 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				887ADE7F2E630F0C00C11B68 /* MedsDispenser.app */,
+				887ADE7F2E630F0C00C11B68 /* Meds.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +50,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		887ADE7E2E630F0C00C11B68 /* MedsDispenser */ = {
+		887ADE7E2E630F0C00C11B68 /* Meds */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 887ADE8A2E630F0E00C11B68 /* Build configuration list for PBXNativeTarget "MedsDispenser" */;
+			buildConfigurationList = 887ADE8A2E630F0E00C11B68 /* Build configuration list for PBXNativeTarget "Meds" */;
 			buildPhases = (
 				887ADE7B2E630F0C00C11B68 /* Sources */,
 				887ADE7C2E630F0C00C11B68 /* Frameworks */,
@@ -63,11 +65,11 @@
 			fileSystemSynchronizedGroups = (
 				887ADE812E630F0C00C11B68 /* MedsDispenser */,
 			);
-			name = MedsDispenser;
+			name = Meds;
 			packageProductDependencies = (
 			);
 			productName = MedsDispenser;
-			productReference = 887ADE7F2E630F0C00C11B68 /* MedsDispenser.app */;
+			productReference = 887ADE7F2E630F0C00C11B68 /* Meds.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -99,7 +101,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				887ADE7E2E630F0C00C11B68 /* MedsDispenser */,
+				887ADE7E2E630F0C00C11B68 /* Meds */,
 			);
 		};
 /* End PBXProject section */
@@ -249,22 +251,30 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 39BLA36PA5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Meds-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = MedsDispenser;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "We use Bluetooth to connect to your pill dispenser";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.vothisau.MedsDispenser;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vothisauhighschool.MedsDispenser;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -280,22 +290,30 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 39BLA36PA5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Meds-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = MedsDispenser;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "We use Bluetooth to connect to your pill dispenser";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.vothisau.MedsDispenser;
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vothisauhighschool.MedsDispenser;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -318,7 +336,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		887ADE8A2E630F0E00C11B68 /* Build configuration list for PBXNativeTarget "MedsDispenser" */ = {
+		887ADE8A2E630F0E00C11B68 /* Build configuration list for PBXNativeTarget "Meds" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				887ADE8B2E630F0E00C11B68 /* Debug */,
