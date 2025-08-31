@@ -467,10 +467,10 @@ struct DosageTimeChart: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.5)
-                            .allowsTightening(true)
+                            .minimumScaleFactor(0.7)
                     }
-                    .frame(width: 210, height: 44)
+                    .padding(.horizontal, 16)
+                    .frame(height: 44)
                     .background(
                         LinearGradient(
                             colors: [Color.blue, Color.blue.opacity(0.8)],
