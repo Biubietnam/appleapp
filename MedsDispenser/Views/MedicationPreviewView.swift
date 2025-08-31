@@ -69,39 +69,66 @@ struct MedicationCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("🏺 \(medication.tube)")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.blue.opacity(0.2))
-                    .cornerRadius(6)
+                HStack(spacing: 4) {
+                    Image(systemName: "testtube.2")
+                        .foregroundColor(.white)
+                    Text(medication.tube)
+                }
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue.opacity(0.8))
+                .foregroundColor(.white)
+                .cornerRadius(6)
                 
                 Spacer()
                 
-                Text("📦 \(medication.amount) tablets")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: "list.clipboard")
+                        .foregroundColor(.secondary)
+                    Text("\(medication.amount) tablets")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
             }
             
-            Text("💊 \(medication.type)")
-                .font(.headline)
-                .fontWeight(.medium)
+            HStack(spacing: 6) {
+                Image(systemName: "pills.fill")
+                    .foregroundColor(.blue)
+                Text(medication.type)
+            }
+            .font(.headline)
+            .fontWeight(.medium)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("⏰ Schedule:")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.secondary)
+                    Text("Schedule:")
+                }
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
                 
                 ForEach(medication.timeToTake) { schedule in
                     HStack {
-                        Text("🕐 \(schedule.time)")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                        Text("💊 \(schedule.dosage)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .foregroundColor(.blue)
+                            Text(schedule.time)
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "pills")
+                                .foregroundColor(.blue)
+                            Text(schedule.dosage)
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        
                         Spacer()
                     }
                     .padding(.horizontal, 10)

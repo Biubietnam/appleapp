@@ -11,6 +11,7 @@ struct ManualInputView: View {
     @State private var newScheduleDosage = ""
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    @State private var showingDosageChart = false
     
     let tubes = ["tube1", "tube2", "tube3", "tube4", "tube5", "tube6"]
     
@@ -19,7 +20,7 @@ struct ManualInputView: View {
             // Medication Details Card
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Image(systemName: "pills.circle.fill")
+                    Image(systemName: "pills.fill")
                         .font(.title2)
                         .foregroundColor(.blue)
                     Text("Medication Details")
@@ -31,8 +32,8 @@ struct ManualInputView: View {
                     // Tube Selection
                     HStack(spacing: 12) {
                         Image(systemName: "testtube.2")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.purple)
+                            .font(.system(size: 16))
+                            .foregroundColor(.green)
                             .frame(width: 24)
                         
                         Text("Tube:")
@@ -44,6 +45,7 @@ struct ManualInputView: View {
                             ForEach(tubes, id: \.self) { tube in
                                 HStack {
                                     Image(systemName: "testtube.2")
+                                        .foregroundColor(.green)
                                     Text(tube.capitalized)
                                 }.tag(tube)
                             }
@@ -54,8 +56,8 @@ struct ManualInputView: View {
                     
                     // Medication Type
                     HStack(spacing: 12) {
-                        Image(systemName: "cross.circle.fill")
-                            .font(.system(size: 16, weight: .medium))
+                        Image(systemName: "cross.fill")
+                            .font(.system(size: 16))
                             .foregroundColor(.red)
                             .frame(width: 24)
                         
@@ -71,13 +73,13 @@ struct ManualInputView: View {
                     
                     // Amount
                     HStack(spacing: 12) {
-                        Image(systemName: "number.circle.fill")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.green)
+                        Image(systemName: "number")
+                            .font(.system(size: 16))
+                            .foregroundColor(.orange)
                             .frame(width: 24)
                         
                         Text("Amount:")
-                            .font(.subheadline)
+                            .font(.system(size: 11))
                             .fontWeight(.medium)
                             .frame(width: 60, alignment: .leading)
                         
@@ -98,15 +100,39 @@ struct ManualInputView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
             
-            // Schedule Card
+            // Schedule Card with Pie Chart
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Image(systemName: "clock.circle.fill")
+                    Image(systemName: "clock.fill")
                         .font(.title2)
-                        .foregroundColor(.orange)
+                        .foregroundColor(.purple)
                     Text("Dosage Schedule")
                         .font(.headline)
                         .fontWeight(.semibold)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        showingDosageChart.toggle()
+                    }) {
+                        Image(systemName: "chart.pie.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                    }
+                }
+                
+                if showingDosageChart {
+                    DosageTimeChart(
+                        onTimeSelected: { time in
+                            newScheduleTime = time
+                            showingDosageChart = false
+                        },
+                        onManualInput: {
+                            showingDosageChart = false
+                        },
+                        showingDosageChart: $showingDosageChart
+                    )
+                    .transition(.opacity.combined(with: .scale))
                 }
                 
                 // Add Schedule Input
@@ -123,7 +149,7 @@ struct ManualInputView: View {
                         Button(action: addSchedule) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(.blue)
+                                .foregroundColor(.green)
                         }
                     }
                     
@@ -134,7 +160,7 @@ struct ManualInputView: View {
                                 HStack(spacing: 12) {
                                     Image(systemName: "clock")
                                         .font(.system(size: 14))
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.blue)
                                         .frame(width: 16)
                                     
                                     Text(schedule.time)
@@ -153,7 +179,7 @@ struct ManualInputView: View {
                                     Button(action: {
                                         schedules.remove(at: index)
                                     }) {
-                                        Image(systemName: "trash.circle.fill")
+                                        Image(systemName: "trash.fill")
                                             .font(.system(size: 16))
                                             .foregroundColor(.red)
                                     }
@@ -172,16 +198,18 @@ struct ManualInputView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
             
-            // Action Buttons
             HStack(spacing: 12) {
                 Button(action: saveMedication) {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.white)
                         Text("Save Medication")
                             .fontWeight(.medium)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(height: 44)
                     .background(Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(10)
@@ -189,12 +217,15 @@ struct ManualInputView: View {
                 
                 Button(action: clearForm) {
                     HStack(spacing: 8) {
-                        Image(systemName: "arrow.clockwise.circle")
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .foregroundColor(.primary)
                         Text("Clear Form")
                             .fontWeight(.medium)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .frame(height: 44)
                     .background(Color(.systemGray5))
                     .foregroundColor(.primary)
                     .cornerRadius(10)
@@ -214,7 +245,7 @@ struct ManualInputView: View {
                 
                 if medicationManager.manualMedications.isEmpty {
                     VStack(spacing: 8) {
-                        Image(systemName: "tray")
+                        Image(systemName: "shippingbox")
                             .font(.system(size: 32))
                             .foregroundColor(.gray)
                         Text("No medications added yet")
@@ -229,18 +260,18 @@ struct ManualInputView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Image(systemName: "testtube.2")
-                                        .foregroundColor(.purple)
+                                        .foregroundColor(.green)
                                     Text(medication.tube.capitalized)
                                         .fontWeight(.semibold)
                                     
-                                    Image(systemName: "cross.circle")
+                                    Image(systemName: "cross.fill")
                                         .foregroundColor(.red)
                                     Text(medication.type)
                                     
                                     Spacer()
                                     
-                                    Image(systemName: "number.circle")
-                                        .foregroundColor(.green)
+                                    Image(systemName: "number")
+                                        .foregroundColor(.orange)
                                     Text("\(medication.amount)")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -248,7 +279,7 @@ struct ManualInputView: View {
                                     Button(action: {
                                         medicationManager.removeManualMedication(at: index)
                                     }) {
-                                        Image(systemName: "trash.circle.fill")
+                                        Image(systemName: "trash.fill")
                                             .foregroundColor(.red)
                                     }
                                 }
@@ -256,7 +287,7 @@ struct ManualInputView: View {
                                 HStack {
                                     Image(systemName: "clock")
                                         .font(.caption)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.blue)
                                     Text(medication.timeToTake.map { "\($0.time) (\($0.dosage))" }.joined(separator: ", "))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
@@ -279,6 +310,7 @@ struct ManualInputView: View {
         } message: {
             Text(alertMessage)
         }
+        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: showingDosageChart)
     }
     
     private func addSchedule() {
@@ -346,3 +378,170 @@ struct ManualInputView: View {
         showingAlert = true
     }
 }
+
+struct DosageTimeChart: View {
+    let onTimeSelected: (String) -> Void
+    let onManualInput: () -> Void
+    @Binding var showingDosageChart: Bool
+    
+    let timeSlots = [
+        ("Morning", "08:00", Color.orange),
+        ("Afternoon", "12:00", Color.blue),
+        ("Evening", "15:00", Color.green),
+        ("Night", "21:00", Color.purple)
+    ]
+    
+    var body: some View {
+        ZStack {
+            // Background overlay
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    onManualInput()
+                }
+            
+            VStack(spacing: 24) {
+                Text("Select Dosage Time")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                // Beautiful large pie chart
+                ZStack {
+                    // Background circle
+                    Circle()
+                        .fill(Color(.systemBackground))
+                        .frame(width: 280, height: 280)
+                        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
+                    
+                    // Pie segments
+                    ForEach(Array(timeSlots.enumerated()), id: \.offset) { index, slot in
+                        Button(action: {
+                            onTimeSelected(slot.1)
+                        }) {
+                            PieSlice(
+                                startAngle: .degrees(Double(index) * 90 - 45),
+                                endAngle: .degrees(Double(index + 1) * 90 - 45),
+                                color: slot.2
+                            )
+                            .frame(width: 260, height: 260)
+                            .overlay(
+                                VStack(spacing: 4) {
+                                    Image(systemName: getTimeIcon(for: slot.0))
+                                        .font(.title)
+                                        .foregroundColor(.white)
+                                    Text(slot.0)
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                    Text(slot.1)
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                                .offset(
+                                    x: cos((Double(index) * 90) * .pi / 180) * 80,
+                                    y: sin((Double(index) * 90) * .pi / 180) * 80
+                                )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    // Center circle
+                    Circle()
+                        .fill(Color(.systemBackground))
+                        .frame(width: 80, height: 80)
+                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        .overlay(
+                            Image(systemName: "clock.fill")
+                                .font(.title)
+                                .foregroundColor(.blue)
+                        )
+                }
+                
+                Button(action: onManualInput) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "keyboard")
+                            .foregroundColor(.white)
+                        Text("Manual Time Input")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .allowsTightening(true)
+                    }
+                    .frame(width: 210, height: 44)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.blue, Color.blue.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(22)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
+                }
+            }
+            .padding(40)
+            .background(Color(.systemBackground))
+            .cornerRadius(20)
+            .shadow(color: Color.black.opacity(0.2), radius: 15, x: 0, y: 8)
+            .scaleEffect(showingDosageChart ? 1.0 : 0.8)
+            .opacity(showingDosageChart ? 1.0 : 0.0)
+        }
+    }
+    
+    private func getTimeIcon(for period: String) -> String {
+        switch period {
+        case "Morning": return "sunrise.fill"
+        case "Afternoon": return "sun.max.fill"
+        case "Evening": return "sunset.fill"
+        case "Night": return "moon.fill"
+        default: return "clock.fill"
+        }
+    }
+}
+
+struct PieSlice: View {
+    let startAngle: Angle
+    let endAngle: Angle
+    let color: Color
+    
+    var body: some View {
+        GeometryReader { geometry in
+            Path { path in
+                let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                let radius = min(geometry.size.width, geometry.size.height) / 2
+                
+                path.move(to: center)
+                path.addArc(
+                    center: center,
+                    radius: radius,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    clockwise: false
+                )
+                path.closeSubpath()
+            }
+            .fill(color)
+            .overlay(
+                Path { path in
+                    let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                    let radius = min(geometry.size.width, geometry.size.height) / 2
+                    
+                    path.move(to: center)
+                    path.addArc(
+                        center: center,
+                        radius: radius,
+                        startAngle: startAngle,
+                        endAngle: endAngle,
+                        clockwise: false
+                    )
+                    path.closeSubpath()
+                }
+                .stroke(Color.white, lineWidth: 2)
+            )
+        }
+    }
+}
+	
