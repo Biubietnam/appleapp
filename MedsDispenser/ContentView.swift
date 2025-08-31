@@ -29,12 +29,16 @@ struct ContentView: View {
     @State var dataCharacteristic: CBCharacteristic?
     @State var bluetoothDelegate: BluetoothDelegate?
     
+    @State var currentChunk: Int = 0
+    @State var totalChunks: Int = 0
+    @State var chunkProgressMessage: String = ""
+    
     var canSubmit: Bool {
         isConnected && dataCharacteristic != nil && !medicationManager.medications.isEmpty && selectedDevice != nil
     }
     
     private let serviceUUID = CBUUID(string: "FFE0")
-    private let characteristicUUID = CBUUID(string: "FFE1 ")
+    private let characteristicUUID = CBUUID(string: "FFE1")
 
     enum InputMode: String, CaseIterable {
         case json = "JSON File"
@@ -153,6 +157,16 @@ struct ContentView: View {
             }
         )
         
+        bluetoothDelegate?.onChunkAcknowledged = { chunkNum, totalChunks in
+            DispatchQueue.main.async {
+                self.currentChunk = chunkNum
+                self.totalChunks = totalChunks
+                self.transmissionProgress = Double(chunkNum) / Double(totalChunks)
+                self.chunkProgressMessage = "📦 Chunk \(chunkNum)/\(totalChunks) acknowledged"
+                self.statusMessage = "Sending chunk \(chunkNum)/\(totalChunks)"
+            }
+        }
+        
         centralManager = CBCentralManager(
             delegate: bluetoothDelegate,
             queue: .main,
@@ -194,44 +208,39 @@ struct ContentView: View {
     
     private func sendData(_ data: Data, completion: @escaping (Bool, String?) -> Void) {
         guard let characteristic = dataCharacteristic,
-              let peripheral = connectedPeripheral else {
-            completion(false, "No data characteristic available")
+              let peripheral = connectedPeripheral,
+              let delegate = bluetoothDelegate else {
+            completion(false, "No data characteristic or delegate available")
             return
         }
         
-        statusMessage = "Preparing data transmission..."
+        statusMessage = "Preparing enhanced data transmission..."
         transmissionProgress = 0.0
+        currentChunk = 0
+        totalChunks = 0
+        chunkProgressMessage = "Initializing transmission..."
         
-        let chunkSize = 20
-        let chunks = data.chunked(into: chunkSize)
-        let totalChunks = chunks.count
-        
-        var currentChunk = 0
-        
-        func sendNextChunk() {
-            guard currentChunk < totalChunks else {
-                statusMessage = "Transmission complete"
-                transmissionProgress = 1.0
-                completion(true, nil)
-                return
-            }
-            
-            let chunk = chunks[currentChunk]
-            currentChunk += 1
-            
-            statusMessage = "Sending chunk \(currentChunk)/\(totalChunks)"
-            transmissionProgress = Double(currentChunk) / Double(totalChunks)
-            
-            peripheral.writeValue(chunk, for: characteristic, type: .withResponse)
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                sendNextChunk()
+        // Use enhanced transmission with acknowledgments
+        delegate.sendDataWithAcknowledgment(data, peripheral: peripheral, characteristic: characteristic, chunkSize: 20) { success, error in
+            DispatchQueue.main.async {
+                if success {
+                    self.statusMessage = "✅ Transmission complete"
+                    self.chunkProgressMessage = "All chunks sent successfully"
+                    self.transmissionProgress = 1.0
+                } else {
+                    self.statusMessage = "❌ Transmission failed"
+                    self.chunkProgressMessage = error ?? "Unknown error"
+                }
+                completion(success, error)
             }
         }
-        
-        sendNextChunk()
     }
 
+    private func showAlert(_ title: String, _ message: String) {
+        alertMessage = message
+        showingAlert = true
+    }
+    
     private var headerSection: some View {
         VStack(spacing: 10) {
             Image(systemName: "pills.fill")
@@ -592,6 +601,18 @@ struct ContentView: View {
                 Text(statusMessage)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                
+                if !chunkProgressMessage.isEmpty {
+                    Text(chunkProgressMessage)
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                }
+                
+                if totalChunks > 0 {
+                    Text("Progress: \(currentChunk)/\(totalChunks) chunks")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding()
@@ -660,11 +681,6 @@ struct ContentView: View {
             }
         }
     }
-    
-    private func showAlert(_ title: String, _ message: String) {
-        alertMessage = message
-        showingAlert = true
-    }
 }
 
 class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
@@ -674,6 +690,16 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     let onCharacteristicDiscovered: (CBCharacteristic) -> Void
     let onConnectionFailed: (Error?) -> Void
     let onDisconnected: (Error?) -> Void
+    
+    var onChunkAcknowledged: ((Int, Int) -> Void)?
+    var onTransmissionComplete: ((Bool, String?) -> Void)?
+    
+    var currentChunkIndex: Int = 0
+    var totalChunks: Int = 0
+    var pendingChunks: [Data] = []
+    var currentPeripheral: CBPeripheral?
+    var currentCharacteristic: CBCharacteristic?
+    var isTransmissionActive: Bool = false
     
     private let serviceUUID = CBUUID(string: "FFE0")
     private let characteristicUUID = CBUUID(string: "FFE1")
@@ -690,6 +716,73 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         self.onCharacteristicDiscovered = onCharacteristicDiscovered
         self.onConnectionFailed = onConnectionFailed
         self.onDisconnected = onDisconnected
+    }
+    
+    func sendDataWithAcknowledgment(_ data: Data, peripheral: CBPeripheral, characteristic: CBCharacteristic, chunkSize: Int = 20, completion: @escaping (Bool, String?) -> Void) {
+        currentChunkIndex = 0
+        pendingChunks = data.chunked(into: chunkSize)
+        totalChunks = pendingChunks.count
+        onTransmissionComplete = completion
+        currentPeripheral = peripheral
+        currentCharacteristic = characteristic
+        isTransmissionActive = true
+        
+        // Validate connection state
+        guard peripheral.state == .connected else {
+            completion(false, "Device not connected")
+            return
+        }
+        
+        // Enable notifications to listen for "MA" response
+        peripheral.setNotifyValue(true, for: characteristic)
+        
+        print("📦 Starting continuous transmission: \(totalChunks) chunks, \(data.count) bytes total")
+        sendAllChunksContinuously()
+    }
+    
+    private func sendAllChunksContinuously() {
+        guard let peripheral = currentPeripheral,
+              let characteristic = currentCharacteristic,
+              isTransmissionActive else {
+            onTransmissionComplete?(false, "Missing peripheral or characteristic")
+            return
+        }
+        
+        // Send all chunks continuously with small delays
+        for (index, chunk) in pendingChunks.enumerated() {
+            let chunkNumber = index + 1
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.5) {
+                guard self.isTransmissionActive else { return }
+                
+                print("📤 Sending chunk \(chunkNumber)/\(self.totalChunks) (\(chunk.count) bytes)")
+                self.onChunkAcknowledged?(chunkNumber, self.totalChunks)
+                
+                // Send chunk without expecting write response
+                peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
+                self.currentChunkIndex = index + 1
+                
+                // If this is the last chunk, start waiting for "MA"
+                if chunkNumber == self.totalChunks {
+                    print("✅ All chunks sent, waiting for 'MA' completion acknowledgment")
+                }
+            }
+        }
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard let data = characteristic.value else { return }
+        
+        if let receivedString = String(data: data, encoding: .utf8) {
+            print("📨 Received: '\(receivedString)'")
+            
+            // Check for "MA" completion acknowledgment
+            if receivedString.contains("MA") && isTransmissionActive {
+                isTransmissionActive = false
+                print("🎉 Received 'MA' - Task complete!")
+                onTransmissionComplete?(true, nil)
+            }
+        }
     }
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
