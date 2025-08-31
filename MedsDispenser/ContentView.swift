@@ -33,8 +33,8 @@ struct ContentView: View {
         isConnected && dataCharacteristic != nil && !medicationManager.medications.isEmpty && selectedDevice != nil
     }
     
-    private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
-    private let characteristicUUID = CBUUID(string: "87654321-4321-4321-4321-cba987654321")
+    private let serviceUUID = CBUUID(string: "FFE0")
+    private let characteristicUUID = CBUUID(string: "FFE1 ")
 
     enum InputMode: String, CaseIterable {
         case json = "JSON File"
@@ -675,8 +675,8 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     let onConnectionFailed: (Error?) -> Void
     let onDisconnected: (Error?) -> Void
     
-    private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
-    private let characteristicUUID = CBUUID(string: "87654321-4321-4321-4321-cba987654321")
+    private let serviceUUID = CBUUID(string: "FFE0")
+    private let characteristicUUID = CBUUID(string: "FFE1")
     
     init(onStateUpdate: @escaping (CBManagerState) -> Void,
          onDeviceDiscovered: @escaping (BLEDevice) -> Void,
@@ -696,7 +696,9 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         onStateUpdate(central.state)
     }
     
-    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
+                        advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        print("📡 Discovered: \(peripheral.name ?? "Unknown") RSSI: \(RSSI)")
         let device = BLEDevice(
             identifier: peripheral.identifier,
             name: peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String,
@@ -720,18 +722,25 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        if let error = error {
+            print("❌ Error discovering services: \(error)")
+        }
         guard let services = peripheral.services else { return }
         for service in services {
+            print("✅ Found service: \(service.uuid)")
             peripheral.discoverCharacteristics([characteristicUUID], for: service)
         }
     }
-    
+
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        if let error = error {
+            print("❌ Error discovering characteristics: \(error)")
+        }
         guard let characteristics = service.characteristics else { return }
         for characteristic in characteristics {
+            print("🔑 Found characteristic: \(characteristic.uuid)")
             if characteristic.uuid == characteristicUUID {
                 onCharacteristicDiscovered(characteristic)
-                break
             }
         }
     }
