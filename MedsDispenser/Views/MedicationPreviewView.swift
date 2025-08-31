@@ -116,4 +116,3 @@ struct MedicationCard: View {
         .cornerRadius(10)
     }
 }
-

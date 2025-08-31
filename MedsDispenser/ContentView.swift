@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreBluetooth
 import UniformTypeIdentifiers
+
 struct BLEDevice {
     let identifier: UUID
     let name: String?
@@ -27,9 +28,11 @@ struct ContentView: View {
     @State var connectedPeripheral: CBPeripheral?
     @State var dataCharacteristic: CBCharacteristic?
     @State var bluetoothDelegate: BluetoothDelegate?
+    
     var canSubmit: Bool {
-        isConnected && dataCharacteristic != nil && !medicationManager.medications.isEmpty
+        isConnected && dataCharacteristic != nil && !medicationManager.medications.isEmpty && selectedDevice != nil
     }
+    
     private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
     private let characteristicUUID = CBUUID(string: "87654321-4321-4321-4321-cba987654321")
 
@@ -70,6 +73,11 @@ struct ContentView: View {
                         fileUploadSection
                     }
                     
+                    // QR Code Input Section
+                    if selectedInputMode == .qr {
+                        qrCodeSection
+                    }
+                    
                     // Medication Preview
                     medicationPreviewSection
                     
@@ -81,7 +89,7 @@ struct ContentView: View {
                 }
                 .padding()
             }
-            .navigationTitle("💊 Pill Dispenser")
+            .navigationTitle("Pill Dispenser")
             .navigationBarTitleDisplayMode(.large)
         }
         .alert("Alert", isPresented: $showingAlert) {
@@ -174,8 +182,10 @@ struct ContentView: View {
         isScanning = false
         statusMessage = discoveredDevices.isEmpty ? "No devices found" : "Scan complete"
     }
+    
     func startEnhancedScanning() { startScanning() }
     func stopEnhancedScanning()  { stopScanning()  }
+    
     func selectDevice(_ device: BLEDevice) {
         selectedDevice = device
         statusMessage = "Connecting to \(device.name ?? "device")..."
@@ -200,7 +210,7 @@ struct ContentView: View {
         
         func sendNextChunk() {
             guard currentChunk < totalChunks else {
-                statusMessage = "✅ Transmission complete"
+                statusMessage = "Transmission complete"
                 transmissionProgress = 1.0
                 completion(true, nil)
                 return
@@ -209,7 +219,7 @@ struct ContentView: View {
             let chunk = chunks[currentChunk]
             currentChunk += 1
             
-            statusMessage = "📦 Sending chunk \(currentChunk)/\(totalChunks)"
+            statusMessage = "Sending chunk \(currentChunk)/\(totalChunks)"
             transmissionProgress = Double(currentChunk) / Double(totalChunks)
             
             peripheral.writeValue(chunk, for: characteristic, type: .withResponse)
@@ -254,13 +264,18 @@ struct ContentView: View {
                         selectedInputMode = mode
                         medicationManager.clearData()
                     }) {
-                        HStack {
+                        HStack(spacing: 6) {
                             Image(systemName: mode.icon)
+                                .font(.system(size: 14, weight: .medium))
                             Text(mode.rawValue)
-                                .font(.caption)
+                                .font(.system(size: 12, weight: .medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
                         .background(selectedInputMode == mode ? Color.blue : Color(.systemGray5))
                         .foregroundColor(selectedInputMode == mode ? .white : .primary)
                         .cornerRadius(8)
@@ -403,7 +418,7 @@ struct ContentView: View {
                     Text("Choose JSON File")
                 }
                 .frame(maxWidth: .infinity)
-                .padding()
+                .frame(height: 44)
                 .background(Color.orange.opacity(0.1))
                 .foregroundColor(.orange)
                 .cornerRadius(10)
@@ -415,13 +430,45 @@ struct ContentView: View {
             
             if !medicationManager.medications.isEmpty {
                 HStack {
-                    Text("✅ Data loaded")
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Data loaded")
                         .foregroundColor(.green)
                     Spacer()
                     Text("\(medicationManager.medications.count) medications")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(15)
+    }
+    
+    private var qrCodeSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Label("QR Code Input", systemImage: "qrcode.viewfinder")
+                .font(.headline)
+                .foregroundColor(.blue)
+            
+            Button(action: {
+                // QR code scanning functionality would go here
+                showAlert("Info", "QR code scanning feature coming soon!")
+            }) {
+                HStack {
+                    Image(systemName: "qrcode.viewfinder")
+                    Text("Scan QR Code")
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.blue.opacity(0.1))
+                .foregroundColor(.blue)
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.blue, lineWidth: 1)
+                )
             }
         }
         .padding()
@@ -464,10 +511,15 @@ struct ContentView: View {
                 .foregroundColor(.red)
             
             VStack(alignment: .leading, spacing: 8) {
-                Text("📋 Pre-Submit Checklist:")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                HStack {
+                    Image(systemName: "list.clipboard")
+                        .foregroundColor(.blue)
+                    Text("Pre-Submit Checklist:")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
                 
+                ChecklistItem(text: "BLE device selected", isChecked: selectedDevice != nil)
                 ChecklistItem(text: "Device connected via BLE", isChecked: isConnected)
                 ChecklistItem(text: "Medication data loaded", isChecked: !medicationManager.medications.isEmpty)
                 ChecklistItem(text: "Dispenser is empty and ready", isChecked: true)
@@ -494,10 +546,14 @@ struct ContentView: View {
             }
             .disabled(!canSubmit || isSubmitting)
             
-            Text("⚠️ WARNING: This will configure the pill dispenser with the loaded medication schedule.")
-                .font(.caption)
-                .foregroundColor(.orange)
-                .fontWeight(.semibold)
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text("WARNING: This will configure the pill dispenser with the loaded medication schedule.")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .fontWeight(.semibold)
+            }
         }
         .padding()
         .background(Color(.systemGray6))
@@ -564,8 +620,13 @@ struct ContentView: View {
     }
     
     func submitConfiguration() {
-        guard selectedDevice != nil else {
-            showAlert("Error", "Please select a BLE device")
+        guard let selectedDevice = selectedDevice else {
+            showAlert("Error", "Please select a BLE device first")
+            return
+        }
+        
+        guard isConnected else {
+            showAlert("Error", "Please ensure the selected device is connected")
             return
         }
         
@@ -592,7 +653,7 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 isSubmitting = false
                 if success {
-                    showAlert("Success", "Configuration sent successfully!")
+                    showAlert("Success", "Configuration sent successfully to \(selectedDevice.name ?? "device")!")
                 } else {
                     showAlert("Error", error ?? "Failed to send configuration")
                 }
