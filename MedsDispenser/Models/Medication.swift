@@ -120,116 +120,88 @@ public class MedicationManager: ObservableObject {
         }
     }
     
-    private	 func parseMedicationFromQRLine(_ line: String, tubeNumber: Int? = nil) -> Medication? {
+    private func parseMedicationFromQRLine(_ line: String, tubeNumber: Int? = nil) -> Medication? {
         print("💊 [PARSER DEBUG] Parsing line: '\(line)'")
-        
-        // Clean the input line
-        let cleanLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        print("💊 [PARSER DEBUG] Cleaned line: '\(cleanLine)'")
-        
-        guard !cleanLine.isEmpty else {
-            print("💊 [PARSER DEBUG] ❌ Empty line after cleaning")
+
+        // Normalize + trim
+        var tokens = line
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "|", omittingEmptySubsequences: false) // keep empties so we can handle trailing '|'
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        // Drop trailing empties (e.g., "...|")
+        while let last = tokens.last, last.isEmpty { tokens.removeLast() }
+
+        print("💊 [PARSER DEBUG] Split into \(tokens.count) components: \(tokens)")
+
+        // Require minimum: Name|Amount|time1|dosage1
+        guard tokens.count >= 4 else {
+            print("💊 [PARSER DEBUG] ❌ Invalid: need Name|Amount|time1|dosage1 (got \(tokens.count))")
             return nil
         }
-        
-        let components = cleanLine.components(separatedBy: "|")
-        print("💊 [PARSER DEBUG] Split into \(components.count) components: \(components)")
-        
-        // Allow 3 components (Name|Amount|Time) with default dosage, or 4+ component formats
-        guard components.count >= 3 else {
-            print("💊 [PARSER DEBUG] ❌ Invalid QR format: Must have minimum format Name|Amount|Time or Name|Amount|Time|Dosage, got \(components.count) components")
-            print("💊 [PARSER DEBUG] Expected format: Name|Amount|Time1|Dosage1|Time2|Dosage2... (dosage optional)")
-            return nil
-        }
-        
-        // Parse name and amount
-        let name = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
-        print("💊 [PARSER DEBUG] Medication name: '\(name)'")
-        
+
+        // Name + amount
+        let name = tokens[0]
         guard !name.isEmpty else {
-            print("💊 [PARSER DEBUG] ❌ Invalid QR format: Empty medication name")
+            print("💊 [PARSER DEBUG] ❌ Empty medication name")
             return nil
         }
-        
-        let amountString = components[1].trimmingCharacters(in: .whitespacesAndNewlines)
-        print("💊 [PARSER DEBUG] Amount string: '\(amountString)'")
-        
-        guard let amount = Int(amountString) else {
-            print("💊 [PARSER DEBUG] ❌ Invalid QR format: Invalid amount '\(amountString)'")
+
+        guard let amount = Int(tokens[1]) else {
+            print("💊 [PARSER DEBUG] ❌ Amount must be integer: '\(tokens[1])'")
             return nil
         }
-        
-        print("💊 [PARSER DEBUG] Parsed amount: \(amount)")
-        
-        var schedules: [Schedule] = []
-        
-        if components.count == 3 {
-            // Format: Name|Amount|Time (dosage defaults to "1 tablet")
-            let timeString = components[2].trimmingCharacters(in: .whitespacesAndNewlines)
-            print("💊 [PARSER DEBUG] Processing single time with default dosage: '\(timeString)'")
-            
-            if isValidTimeFormat(timeString) {
-                let schedule = Schedule(time: timeString, dosage: "1 tablet")
-                schedules.append(schedule)
-                print("💊 [PARSER DEBUG] ✅ Added schedule with default dosage: \(timeString) - 1 tablet")
+
+        // time1 + dosage1 required
+        let time1 = tokens[2]
+        let dosage1 = tokens[3]
+        guard isValidTimeFormat(time1), !dosage1.isEmpty else {
+            print("💊 [PARSER DEBUG] ❌ Invalid first pair time/dosage: '\(time1)'/'\(dosage1)'")
+            return nil
+        }
+
+        var schedules: [Schedule] = [Schedule(time: time1, dosage: dosage1)]
+
+        // Subsequent: timeN required, dosageN optional (defaults to dosage1)
+        var i = 4
+        while i < tokens.count {
+            let t = tokens[i]
+            if !isValidTimeFormat(t) {
+                print("💊 [PARSER DEBUG] ❌ Expected time at position \(i): '\(t)'")
+                return nil
+            }
+
+            var d = dosage1
+            if i + 1 < tokens.count, !tokens[i + 1].isEmpty {
+                d = tokens[i + 1]
+                i += 2
             } else {
-                print("💊 [PARSER DEBUG] ❌ Invalid time format: '\(timeString)'")
-                return nil
+                // no dosage provided -> use dosage1
+                i += 1
             }
-        } else {
-            // Format: Name|Amount|Time1|Dosage1|Time2|Dosage2...
-            let timeDosagePairs = components.count - 2
-            print("💊 [PARSER DEBUG] Time/dosage components count: \(timeDosagePairs)")
-            
-            guard timeDosagePairs % 2 == 0 else {
-                print("💊 [PARSER DEBUG] ❌ Invalid QR format: Time/Dosage pairs must be complete (even number after Name|Amount)")
-                print("💊 [PARSER DEBUG] Got \(timeDosagePairs) time/dosage components, need even number")
-                return nil
-            }
-            
-            // Parse time/dosage pairs starting from index 2
-            var index = 2
-            while index + 1 < components.count {
-                let timeString = components[index].trimmingCharacters(in: .whitespacesAndNewlines)
-                let dosageString = components[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                print("💊 [PARSER DEBUG] Processing time/dosage pair: '\(timeString)'/'\(dosageString)'")
-                
-                // Validate time format (should be HH:MM)
-                if isValidTimeFormat(timeString) && !dosageString.isEmpty {
-                    let schedule = Schedule(time: timeString, dosage: dosageString)
-                    schedules.append(schedule)
-                    print("💊 [PARSER DEBUG] ✅ Added schedule: \(timeString) - \(dosageString)")
-                } else {
-                    print("💊 [PARSER DEBUG] ❌ Invalid time/dosage pair: '\(timeString)'/'\(dosageString)'")
-                    print("💊 [PARSER DEBUG] Time format valid: \(isValidTimeFormat(timeString)), Dosage not empty: \(!dosageString.isEmpty)")
-                    return nil
-                }
-                
-                index += 2
-            }
+
+            schedules.append(Schedule(time: t, dosage: d))
+            print("💊 [PARSER DEBUG] ✅ Added schedule: \(t) - \(d)")
         }
-        
+
         guard !schedules.isEmpty else {
-            print("💊 [PARSER DEBUG] ❌ Invalid QR format: No valid time/dosage pairs found")
+            print("💊 [PARSER DEBUG] ❌ No schedules parsed")
             return nil
         }
-        
-        // Generate tube identifier
+
         let tubeId = tubeNumber ?? schedules.count
-        print("💊 [PARSER DEBUG] Assigned tube ID: \(tubeId)")
-        
         let medication = Medication(
             tube: "Tube \(tubeId)",
             type: name,
             amount: amount,
             timeToTake: schedules
         )
-        
-        print("💊 [PARSER DEBUG] ✅ Successfully created medication: \(medication.type) with \(schedules.count) schedules")
-        
+        print("💊 [PARSER DEBUG] ✅ Medication \(name) with \(schedules.count) schedules")
         return medication
     }
+
     
     private func isValidTimeFormat(_ timeString: String) -> Bool {
         let timePattern = "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"

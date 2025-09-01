@@ -245,25 +245,23 @@ extension QRScannerViewController: AVCaptureMetadataOutputObjectsDelegate {
         for metadataObject in metadataObjects {
             guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject,
                   let stringValue = readableObject.stringValue else { continue }
-            
-            print("🔍 [QR DEBUG] Raw QR data detected: '\(stringValue)'")
-            print("🔍 [QR DEBUG] QR data length: \(stringValue.count) characters")
-            print("🔍 [QR DEBUG] QR data as bytes: \(stringValue.data(using: .utf8)?.map { String(format: "%02x", $0) }.joined(separator: " ") ?? "nil")")
-            
-            let lines = stringValue.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-            print("🔍 [QR DEBUG] Split into \(lines.count) lines:")
-            for (index, line) in lines.enumerated() {
-                print("🔍 [QR DEBUG] Line \(index + 1): '\(line)'")
-                let components = line.components(separatedBy: "|")
-                print("🔍 [QR DEBUG] Line \(index + 1) has \(components.count) components: \(components)")
+
+            let normalized = stringValue
+                .replacingOccurrences(of: "\r\n", with: "\n")
+                .replacingOccurrences(of: "\r", with: "\n")
+
+            let lines = normalized
+                .split(separator: "\n", omittingEmptySubsequences: true)
+                .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+
+            print("🔍 [QR DEBUG] Lines detected: \(lines.count) – \(lines)")
+
+            // Store each line separately (deduped via Set)
+            for line in lines where !line.isEmpty {
+                detectedCodes.insert(line)
             }
-            
-            // Add detected code to set (automatically handles duplicates)
-            detectedCodes.insert(stringValue)
-            
-            // Provide haptic feedback
+
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
-            
             finishScanning()
             return
         }
