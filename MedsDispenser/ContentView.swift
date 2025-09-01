@@ -764,7 +764,7 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
                 
                 // If this is the last chunk, start waiting for "MA"
                 if chunkNumber == self.totalChunks {
-                    print("✅ All chunks sent, waiting for 'MA' completion acknowledgment")
+                    print("✅ All chunks sent, waiting for 'A' completion acknowledgment")
                 }
             }
         }
@@ -776,10 +776,9 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
         if let receivedString = String(data: data, encoding: .utf8) {
             print("📨 Received: '\(receivedString)'")
             
-            // Check for "MA" completion acknowledgment
-            if receivedString.contains("MA") && isTransmissionActive {
+            if receivedString.contains("A") && isTransmissionActive {
                 isTransmissionActive = false
-                print("🎉 Received 'MA' - Task complete!")
+                print("🎉 Received 'A' - Task complete!")
                 onTransmissionComplete?(true, nil)
             }
         }
