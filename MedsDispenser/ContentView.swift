@@ -17,6 +17,8 @@ struct ContentView: View {
     @State var alertMessage = ""
     @State var isSubmitting = false
     
+    @State var showingQRScanner = false
+    
     @State var centralManager: CBCentralManager?
     @State var discoveredDevices: [BLEDevice] = []
     @State var selectedDevice: BLEDevice?
@@ -107,6 +109,11 @@ struct ContentView: View {
             allowsMultipleSelection: false
         ) { result in
             handleFileSelection(result)
+        }
+        .sheet(isPresented: $showingQRScanner) {
+            QRCodeScannerView(isPresented: $showingQRScanner) { qrCodes in
+                handleQRCodeDetection(qrCodes)
+            }
         }
         .onAppear {
             setupBluetooth()
@@ -462,8 +469,7 @@ struct ContentView: View {
                 .foregroundColor(.blue)
             
             Button(action: {
-                // QR code scanning functionality would go here
-                showAlert("Info", "QR code scanning feature coming soon!")
+                showingQRScanner = true
             }) {
                 HStack {
                     Image(systemName: "qrcode.viewfinder")
@@ -479,6 +485,10 @@ struct ContentView: View {
                         .stroke(Color.blue, lineWidth: 1)
                 )
             }
+            
+            Text("Expected format: Name|Amount|Time1|Dosage1|Time2|Dosage2...")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
         .padding()
         .background(Color(.systemGray6))
@@ -640,6 +650,35 @@ struct ContentView: View {
         }
     }
     
+    private func handleQRCodeDetection(_ qrCodes: [String]) {
+        let stats = medicationManager.getQRParsingStats(qrCodes)
+        let validation = medicationManager.validateQRData(qrCodes)
+        
+        // Process valid QR codes
+        if !validation.valid.isEmpty {
+            medicationManager.addMedicationsFromQRData(validation.valid)
+        }
+        
+        // Provide detailed feedback to user
+        var message = ""
+        if stats.validMedications > 0 {
+            message += "Successfully loaded \(stats.validMedications) medication(s)"
+        }
+        
+        if stats.invalidLines > 0 {
+            if !message.isEmpty { message += "\n\n" }
+            message += "⚠️ \(stats.invalidLines) invalid QR code line(s) were skipped"
+            message += "\n\nExpected format: Name|Amount|Time1|Dosage1|Time2|Dosage2..."
+        }
+        
+        if message.isEmpty {
+            message = "No valid medication data found in QR code(s)"
+        }
+        
+        let title = stats.validMedications > 0 ? "QR Code Processed" : "QR Code Error"
+        showAlert(title, message)
+    }
+    
     func submitConfiguration() {
         guard let selectedDevice = selectedDevice else {
             showAlert("Error", "Please select a BLE device first")
@@ -790,7 +829,7 @@ class BluetoothDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegat
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                         advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        print("📡 Discovered: \(peripheral.name ?? "Unknown") RSSI: \(RSSI)")
+//        print("📡 Discovered: \(peripheral.name ?? "Unknown") RSSI: \(RSSI)")
         let device = BLEDevice(
             identifier: peripheral.identifier,
             name: peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String,

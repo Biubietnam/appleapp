@@ -6,5 +6,7 @@
 	<string></string>
 	<key>NSFileUsageDescription</key>
 	<string>This app needs access to files in order to load medication data.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>To scan QR</string>
 </dict>
 </plist>
