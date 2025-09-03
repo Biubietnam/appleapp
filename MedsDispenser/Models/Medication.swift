@@ -45,9 +45,19 @@ public class MedicationManager: ObservableObject {
     }
     
     func addManualMedication(_ medication: Medication) {
-        // Remove existing medication for same tube
-        manualMedications.removeAll { $0.tube == medication.tube }
-        manualMedications.append(medication)
+        let norm = normalizeTube(medication.tube)
+
+        // rebuild with normalized tube
+        let fixed = Medication(
+            tube: norm,
+            type: medication.type,
+            amount: medication.amount,
+            timeToTake: medication.timeToTake
+        )
+
+        // remove any existing with same normalized tube
+        manualMedications.removeAll { normalizeTube($0.tube) == norm }
+        manualMedications.append(fixed)
         medications = manualMedications
         saveMedications()
     }
@@ -72,16 +82,25 @@ public class MedicationManager: ObservableObject {
     func loadMedications() {
         do {
             let data = try Data(contentsOf: medicationsFileURL)
-            manualMedications = try JSONDecoder().decode([Medication].self, from: data)
+            let decoded = try JSONDecoder().decode([Medication].self, from: data)
+            // normalize tubes on load
+            manualMedications = decoded.map { m in
+                Medication(
+                    tube: normalizeTube(m.tube),
+                    type: m.type,
+                    amount: m.amount,
+                    timeToTake: m.timeToTake
+                )
+            }
             medications = manualMedications
             print("Medications loaded successfully: \(manualMedications.count) items")
         } catch {
             print("Failed to load medications: \(error)")
-            // Initialize with empty array if file doesn't exist
             manualMedications = []
             medications = []
         }
     }
+
     
     func addMedicationsFromQRData(_ qrDataLines: [String]) {
         print("💊 [PARSER DEBUG] Starting to parse QR data with \(qrDataLines.count) raw QR codes")
@@ -119,7 +138,26 @@ public class MedicationManager: ObservableObject {
             addManualMedication(medication)
         }
     }
-    
+    private func normalizeTube(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Match: "Tube 1", "tube1", "TUBE-02", "Tube_003", etc.
+        let pattern = #"(?i)^tube[\s_-]*(\d+)$"#
+        if let re = try? NSRegularExpression(pattern: pattern),
+           let m = re.firstMatch(in: trimmed, options: [], range: NSRange(trimmed.startIndex..., in: trimmed)),
+           let r = Range(m.range(at: 1), in: trimmed) {
+            let digits = String(trimmed[r]).trimmingCharacters(in: .whitespacesAndNewlines)
+            // strip leading zeros
+            let n = Int(digits) ?? 0
+            return "tube\(n)"
+        }
+
+        // If it already looks like tubeN (lower), keep it; otherwise fallback to lowercased raw
+        if trimmed.lowercased().hasPrefix("tube") {
+            return trimmed.lowercased().replacingOccurrences(of: " ", with: "")
+        }
+        return trimmed.lowercased()
+    }
     private func parseMedicationFromQRLine(_ line: String, tubeNumber: Int? = nil) -> Medication? {
         print("💊 [PARSER DEBUG] Parsing line: '\(line)'")
 
@@ -193,7 +231,7 @@ public class MedicationManager: ObservableObject {
 
         let tubeId = tubeNumber ?? schedules.count
         let medication = Medication(
-            tube: "Tube \(tubeId)",
+            tube: "tube\(tubeId)",
             type: name,
             amount: amount,
             timeToTake: schedules
